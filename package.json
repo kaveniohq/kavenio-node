@@ -4,7 +4,8 @@
   "type": "module",
   "scripts": {
     "generate": "node scripts/generate.mjs",
-    "verify": "node scripts/verify.mjs"
+    "verify": "node scripts/verify.mjs",
+    "pack:dry-run": "cd generated/node && npm pack --dry-run"
   },
   "devDependencies": {
     "@openapitools/openapi-generator-cli": "2.39.0"

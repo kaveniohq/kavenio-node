@@ -1,0 +1,73 @@
+name: Publish npm package
+
+on:
+  release:
+    types:
+      - published
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "SDK version to publish, for example v1.0.0"
+        required: true
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    name: Publish @kavenio/sdk
+    runs-on: ubuntu-latest
+    environment: npm
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22.14.0"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Update npm
+        run: npm install -g npm@latest
+
+      - name: Resolve version
+        id: version
+        run: |
+          raw_version="${{ github.event.release.tag_name || inputs.version }}"
+          version="$(node scripts/resolve-version.mjs "$raw_version")"
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+
+      - name: Install generator dependencies
+        run: npm ci
+
+      - name: Verify pinned OpenAPI checksum
+        run: |
+          cd openapi
+          sha256sum --check openapi.sha256
+
+      - name: Generate SDK
+        env:
+          SDK_LANGUAGE: node
+          SDK_VERSION: ${{ steps.version.outputs.version }}
+        run: npm run generate
+
+      - name: Verify SDK
+        env:
+          SDK_LANGUAGE: node
+        run: npm run verify
+
+      - name: Check package contents
+        run: npm run pack:dry-run
+
+      - name: Publish package
+        working-directory: generated/node
+        run: npm publish --access public --provenance
