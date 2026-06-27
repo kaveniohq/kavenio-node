@@ -54,7 +54,7 @@ For the complete REST API reference, use the Kavenio API docs.
 
 ## Documentation
 
-Canonical docs live on the Kavenio docs site:
+Developer docs and API reference:
 
 - [SDK docs](https://kavenio.com/docs/sdk/node)
 - [API reference](https://kavenio.com/docs/api)
