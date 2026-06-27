@@ -32,6 +32,14 @@ If npm requires the package to exist before trusted publishing can be
 configured, publish `@kavenio/sdk` once manually with `--access public`, then
 configure trusted publishing before the next release.
 
+For the first manual publish:
+
+```bash
+cd generated/node
+npm install
+npm publish --access public
+```
+
 ## Local Release Check
 
 Before publishing, verify the package locally:
