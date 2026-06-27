@@ -1,0 +1,11 @@
+generatorName: typescript-fetch
+inputSpec: openapi/openapi.json
+outputDir: generated/node
+additionalProperties:
+  npmName: "@kavenio/sdk"
+  npmRepository: https://registry.npmjs.org
+  supportsES6: true
+  typescriptThreePlus: true
+  useSingleRequestParameter: false
+  withInterfaces: true
+  disallowAdditionalPropertiesIfNotPresent: false

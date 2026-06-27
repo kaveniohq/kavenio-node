@@ -1,0 +1,149 @@
+name: Sync From OpenAPI
+
+on:
+  repository_dispatch:
+    types:
+      - openapi_released
+  workflow_dispatch:
+    inputs:
+      language:
+        description: "SDK language"
+        required: true
+      spec_url:
+        description: "Immutable OpenAPI artifact URL"
+        required: true
+      spec_sha256:
+        description: "Expected OpenAPI SHA-256"
+        required: true
+      api_version:
+        description: "Kavenio API version"
+        required: true
+      sdk_version:
+        description: "SDK package version"
+        required: true
+      source_commit:
+        description: "Source commit in the main Kavenio repo"
+        required: true
+      bump:
+        description: "Version bump classification"
+        required: true
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  sync:
+    name: Regenerate SDK
+    runs-on: ubuntu-latest
+
+    env:
+      SDK_LANGUAGE: ${{ github.event.client_payload.language || inputs.language || vars.SDK_LANGUAGE }}
+      SPEC_URL: ${{ github.event.client_payload.spec_url || inputs.spec_url }}
+      SPEC_SHA256: ${{ github.event.client_payload.spec_sha256 || inputs.spec_sha256 }}
+      API_VERSION: ${{ github.event.client_payload.api_version || inputs.api_version }}
+      SDK_VERSION: ${{ github.event.client_payload.sdk_version || inputs.sdk_version }}
+      SOURCE_COMMIT: ${{ github.event.client_payload.source_commit || inputs.source_commit }}
+      BUMP: ${{ github.event.client_payload.bump || inputs.bump }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up Python
+        if: env.SDK_LANGUAGE == 'python'
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Set up Ruby
+        if: env.SDK_LANGUAGE == 'ruby'
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+
+      - name: Set up Rust
+        if: env.SDK_LANGUAGE == 'rust'
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Set up PHP
+        if: env.SDK_LANGUAGE == 'php'
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+
+      - name: Set up Go
+        if: env.SDK_LANGUAGE == 'go'
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.23"
+
+      - name: Set up .NET
+        if: env.SDK_LANGUAGE == 'dotnet'
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Install generator dependencies
+        run: npm install
+
+      - name: Download pinned OpenAPI spec
+        run: |
+          test -n "$SDK_LANGUAGE"
+          test -n "$SPEC_URL"
+          test -n "$SPEC_SHA256"
+          mkdir -p openapi
+          curl --fail --location "$SPEC_URL" --output openapi/openapi.json
+          printf '%s  openapi.json\n' "$SPEC_SHA256" > openapi/openapi.sha256
+          (
+            cd openapi
+            sha256sum --check openapi.sha256
+          )
+
+      - name: Generate SDK
+        run: npm run generate
+
+      - name: Verify SDK
+        run: npm run verify
+
+      - name: Create sync branch
+        run: |
+          branch="sync/openapi-${API_VERSION}-${SDK_LANGUAGE}"
+          git config user.name "kavenio-sdk-bot"
+          git config user.email "sdk-bot@kavenio.com"
+          git checkout -B "$branch"
+          git add openapi generated
+          git commit -m "Regenerate ${SDK_LANGUAGE} SDK for API ${API_VERSION}" || exit 0
+          git push --force-with-lease origin "$branch"
+          echo "BRANCH=$branch" >> "$GITHUB_ENV"
+
+      - name: Open pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ -z "${BRANCH:-}" ]; then
+            echo "No SDK changes to publish."
+            exit 0
+          fi
+
+          gh pr create \
+            --head "$BRANCH" \
+            --base main \
+            --title "Regenerate ${SDK_LANGUAGE} SDK for API ${API_VERSION}" \
+            --body "Generated from Kavenio API ${API_VERSION}.
+
+Source commit: ${SOURCE_COMMIT}
+OpenAPI SHA-256: ${SPEC_SHA256}
+SDK version: ${SDK_VERSION}
+Version bump: ${BUMP}"
