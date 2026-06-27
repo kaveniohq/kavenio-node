@@ -28,9 +28,8 @@ if (!existsSync("openapi/openapi.json")) {
 rmSync("generated", { recursive: true, force: true });
 
 const result = spawnSync(
-  "npx",
+  "node_modules/.bin/openapi-generator-cli",
   [
-    "openapi-generator-cli",
     "generate",
     "-c",
     configPath,
