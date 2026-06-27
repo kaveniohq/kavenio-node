@@ -1,7 +1,7 @@
 import { Kavenio } from "../src";
 
 const kavenio = new Kavenio({
-  apiKey: "kvn_live_example",
+  apiKey: "example-api-key",
 });
 
 async function main() {

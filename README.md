@@ -14,7 +14,7 @@ Create a Kavenio account from the [dashboard](https://app.kavenio.com), then
 create an API key from [API Keys](https://app.kavenio.com/api-keys).
 
 ```bash
-export KAVENIO_API_KEY="kvn_live_..."
+export KAVENIO_API_KEY="<your-api-key>"
 ```
 
 ## Quickstart

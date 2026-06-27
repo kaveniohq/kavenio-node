@@ -1,7 +1,7 @@
 import { Kavenio, type CreatePostRequest } from "../src";
 
 const kavenio = new Kavenio({
-  apiKey: "kvn_test_example",
+  apiKey: "example-api-key",
 });
 
 const input = {
