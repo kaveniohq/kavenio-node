@@ -1,0 +1,85 @@
+name: Verify SDK
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Verify generated SDK
+    runs-on: ubuntu-latest
+
+    env:
+      SDK_LANGUAGE: ${{ vars.SDK_LANGUAGE }}
+      SDK_VERSION: "1.0.0"
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22.14.0"
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up Python
+        if: env.SDK_LANGUAGE == 'python'
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Set up Ruby
+        if: env.SDK_LANGUAGE == 'ruby'
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+
+      - name: Set up Rust
+        if: env.SDK_LANGUAGE == 'rust'
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Set up PHP
+        if: env.SDK_LANGUAGE == 'php'
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+
+      - name: Set up Go
+        if: env.SDK_LANGUAGE == 'go'
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.23"
+
+      - name: Set up .NET
+        if: env.SDK_LANGUAGE == 'dotnet'
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Install generator dependencies
+        run: npm ci
+
+      - name: Verify pinned OpenAPI checksum
+        run: |
+          cd openapi
+          sha256sum --check openapi.sha256
+
+      - name: Regenerate SDK
+        run: npm run generate
+
+      - name: Verify SDK
+        run: npm run verify
+
+      - name: Check generated files are committed
+        run: git diff --exit-code openapi generated
